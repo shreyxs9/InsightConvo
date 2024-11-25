@@ -1,36 +1,35 @@
-import express from 'express';
-import multer from 'multer';
-import cors from 'cors'; // Import CORS middleware
-import { SpeechClient } from '@google-cloud/speech';
+import express from "express";
+import multer from "multer";
+import cors from "cors";
+import { SpeechClient } from "@google-cloud/speech";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const app = express();
-
-// Enable CORS for all origins
 app.use(cors());
 
-const speechClient = new SpeechClient({
-  keyFilename: './long-leaf-336308-60d419b7f42d.json', // Update with your path
-});
-const upload = multer(); // Will handle incoming form-data
+const speechClient = new SpeechClient({ keyFilename: "./long-leaf-336308-60d419b7f42d.json" });
+const genAI = new GoogleGenerativeAI("AIzaSyACLQ_FJAMbiOvhoa5ISBZtZkiC1rf6FuU");
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-// Middleware to parse JSON request bodies
+const upload = multer();
+
 app.use(express.json());
 
-// Endpoint to handle real-time transcription
-app.post('/transcribe', upload.single('file'), async (req, res) => {
-  const audioBuffer = req.file?.buffer; // Audio data from the uploaded file
+app.post("/transcribe", upload.single("file"), async (req, res) => {
+  const audioBuffer = req.file?.buffer;
+
   if (!audioBuffer) {
-    return res.status(400).json({ error: 'Audio data is required.' });
+    return res.status(400).json({ error: "Audio data is required." });
   }
 
   const request = {
     config: {
-      encoding: 'WEBM_OPUS',
+      encoding: "WEBM_OPUS",
       sampleRateHertz: 48000,
-      languageCode: 'en-US',
+      languageCode: "en-US",
     },
     audio: {
-      content: audioBuffer.toString('base64'),
+      content: audioBuffer.toString("base64"),
     },
   };
 
@@ -38,17 +37,21 @@ app.post('/transcribe', upload.single('file'), async (req, res) => {
     const [response] = await speechClient.recognize(request);
     const transcription = response.results
       .map((result) => result.alternatives[0].transcript)
-      .join('\n');
-    console.log({ transcription });
-    res.json({ transcription });
+      .join("\n");
+
+    const followUpQuestions = await generateFollowUpQuestions(transcription);
+    res.json({ transcription, questions: followUpQuestions });
   } catch (error) {
-    console.error('Error transcribing audio:', error);
-    res.status(500).json({ error: 'Failed to transcribe audio' });
+    console.error("Error processing request:", error);
+    res.status(500).json({ error: "Failed to process audio" });
   }
 });
 
-// Start the server
+const generateFollowUpQuestions = async (responseText) => {
+  const prompt = `Based on the following response: "${responseText}", generate one follow-up question.`;
+  const result = await model.generateContent(prompt);
+  return [result.response.text()]; // Returns an array with a single follow-up question
+};
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

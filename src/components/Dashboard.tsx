@@ -102,7 +102,7 @@ const Dashboard = () => {
               <tbody>
                 {userData.meetings && userData.meetings.length > 0 ? (
                   userData.meetings.map((meeting) => (
-                    <tr key={meeting.meetingId} className="border-b border-gray-700/50">
+                    <tr className="border-b border-gray-700/50">
                       <td className="py-4">{meeting.position}</td>
                       <td className="py-4 text-gray-400">
                         {new Date(meeting.date).toLocaleDateString()}
