@@ -8,7 +8,7 @@ const app = express();
 app.use(cors());
 
 const speechClient = new SpeechClient({ keyFilename: "./long-leaf-336308-60d419b7f42d.json" });
-const genAI = new GoogleGenerativeAI("AIzaSyACLQ_FJAMbiOvhoa5ISBZtZkiC1rf6FuU");
+const genAI = new GoogleGenerativeAI("");
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 const upload = multer();
